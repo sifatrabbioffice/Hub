@@ -1,0 +1,44 @@
+name: Build WinHub iOS
+on: [push]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby (for Fastlane)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Install Dependencies
+        run: |
+          brew install xcbeautify
+          # If using UTM-based core
+          git submodule update --init --recursive
+
+      - name: Build IPA
+        run: |
+          xcodebuild -project WinHub.xcodeproj \
+                     -scheme "WinHub" \
+                     -sdk iphoneos \
+                     -configuration Release \
+                     -archivePath $PWD/WinHub.xcarchive \
+                     archive \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO
+
+      - name: Export IPA (Unsigned)
+        run: |
+          mkdir -p Payload
+          cp -r $PWD/WinHub.xcarchive/Products/Applications/*.app Payload/
+          zip -r WinHub.ipa Payload
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinHub-15ProMax-IPA
+          path: WinHub.ipa
